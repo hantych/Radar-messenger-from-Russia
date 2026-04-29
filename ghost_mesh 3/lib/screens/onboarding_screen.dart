@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:flutter/material.dart';
-import 'package:nearby_connections/nearby_connections.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 
@@ -108,11 +107,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // Nearby Wi-Fi (Android 13+)
     final nearby = await Permission.nearbyWifiDevices.status;
     _nearby = (nearby.isGranted || nearby.isLimited || nearby.isDenied)
-        // 'denied' counts as ok because the OS may not actually require it on
-        // older Android — Nearby Connections will fall back gracefully.
         ? _ReqState.ok
         : _ReqState.fail;
-    // …but if it's permanentlyDenied that's a real fail
     if (nearby.isPermanentlyDenied) _nearby = _ReqState.fail;
 
     // Notifications
@@ -152,9 +148,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   }
 
   Future<void> _enableBluetooth() async {
-    try {
-      await Nearby().enableBluetooth();
-    } catch (_) {}
+    // The package doesn't expose a Bluetooth-enable method, so just open
+    // app settings — user can toggle Bluetooth from the system shortcut.
+    await openAppSettings();
     await _runChecks();
   }
 
