@@ -14,19 +14,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Detect project root
+      - name: Find project
         id: detect
         shell: bash
         run: |
-          if [ -f "pubspec.yaml" ]; then
-            echo "root=." >> $GITHUB_OUTPUT
-          elif [ -f "ghost_mesh/pubspec.yaml" ]; then
-            echo "root=ghost_mesh" >> $GITHUB_OUTPUT
-          else
-            echo "ERROR: pubspec.yaml not found"
-            ls -la
-            exit 1
-          fi
+          ROOT=$(find . -name "pubspec.yaml" -not -path "*/node_modules/*" -not -path "*/build/*" | head -1 | xargs dirname)
+          echo "Found project at: $ROOT"
+          echo "root=$ROOT" >> $GITHUB_OUTPUT
 
       - name: Set up Java 17
         uses: actions/setup-java@v4
