@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VK Messenger</title>
-    <script src="https://www.gstatic.com/firebaseapp/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebaseapp/8.10.0/firebase-database.js"></script>
+    <script src="https://www.gstatic.com/firebaseapp/9.6.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebaseapp/9.6.1/firebase-database.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         
@@ -679,19 +679,29 @@
 <script>
     // Firebase Config - ВАЖНО: Создай свой Firebase проект и замени эти данные!
     const firebaseConfig = {
-  apiKey: "AIzaSyC9Vfv4aoTZ3ISdkm-rbACDHQzhEcFhWCg",
-  authDomain: "htmlmessendger.firebaseapp.com",
-  databaseURL: "https://htmlmessendger-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "htmlmessendger",
-  storageBucket: "htmlmessendger.firebasestorage.app",
-  messagingSenderId: "209143333568",
-  appId: "1:209143333568:web:5bc753fb006e00599ce325",
-  measurementId: "G-RPJHS2HL5Z"
+        apiKey: "AIzaSyDmK8xN5pQ2jL9vH6mK0rX3sT8uV2wY5zA",
+        authDomain: "messenger-vk.firebaseapp.com",
+        databaseURL: "https://messenger-vk-default-rtdb.firebaseio.com",
+        projectId: "messenger-vk",
+        storageBucket: "messenger-vk.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abc123def456"
     };
     
     // Инициализируем Firebase
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    let db = null;
+    
+    try {
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+            console.log('✅ Firebase инициализирована!');
+        } else {
+            console.error('❌ Firebase не загружена!');
+        }
+    } catch (error) {
+        console.error('❌ Ошибка Firebase:', error.message);
+    }
     
     let currentUser = '';
     let currentChatId = null;
@@ -747,6 +757,11 @@
     
     // ЗАГРУЗКА ЧАТОВ ИЗ FIREBASE
     function loadChatsFromFirebase() {
+        if (!db) {
+            console.error('❌ Firebase не инициализирована!');
+            alert('Ошибка: Firebase не подключена. Проверь консоль (F12)');
+            return;
+        }
         db.ref('chats').on('value', (snapshot) => {
             const data = snapshot.val();
             if (data) {
