@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VK Messenger</title>
+    <script src="https://www.gstatic.com/firebaseapp/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebaseapp/8.10.0/firebase-database.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            background: #f0f2f5;
+            color: #333;
+        }
+        
+        .screen { display: none; }
+        .screen.active { display: flex; }
+        
+        /* ===== ЛОГИН ЭКРАН ===== */
+        #loginScreen {
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #537bd3 0%, #2d5aa0 100%);
+            padding: 20px;
+        }
+        
+        .vk-login {
+            background: white;
+            border-radius: 6px;
+            padding: 40px 50px;
+            width: 100%;
+            max-width: 380px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        
+        .vk-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .vk-logo img {
+            height: 40px;
+        }
+        
+        .vk-logo h1 {
+            font-size: 24px;
+            color: #537bd3;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        
+        .vk-login input {
+            width: 100%;
+            padding: 11px 12px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 13px;
+            background: #f8f9fa;
+        }
+        
+        .vk-login input:focus {
+            outline: none;
+            border-color: #537bd3;
+            background: white;
+        }
+        
+        .vk-login button {
+            width: 100%;
+            padding: 11px;
+            background: #537bd3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        
+        .vk-login button:hover {
+            background: #2d5aa0;
+        }
+        
+        .vk-login button:active {
+            transform: scale(0.99);
+        }
+        
+        /* ===== ЧАТ ЭКРАН ===== */
+        #chatScreen {
+            flex-direction: row;
+            height: 100vh;
+        }
+        
+        .vk-sidebar {
+            width: 280px;
+            background: white;
+            border-right: 1px solid #e5e5e5;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .vk-sidebar-header {
+            padding: 12px 12px;
+            border-bottom: 1px solid #e5e5e5;
+        }
+        
+        .vk-sidebar-header h2 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px;
+            background: #f0f2f5;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #537bd3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+        
+        .user-name {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        .logout-btn {
+            width: 24px;
+            height: 24px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+        }
+        
+        .search-input {
+            margin: 10px 12px 0 12px;
+            width: calc(100% - 24px);
+            padding: 8px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 3px;
+            font-size: 12px;
+            background: #f0f2f5;
+        }
+        
+        .search-input:focus {
+            outline: none;
+            border-color: #537bd3;
+            background: white;
+        }
+        
+        .vk-chats {
+            flex: 1;
+            overflow-y: auto;
+            padding: 5px 0;
+        }
+        
+        .vk-chat-item {
+            padding: 10px 12px;
+            cursor: pointer;
+            border-left: 3px solid transparent;
+            transition: background 0.2s;
+            border-bottom: 1px solid #f0f2f5;
+        }
+        
+        .vk-chat-item:hover {
+            background: #f0f2f5;
+        }
+        
+        .vk-chat-item.active {
+            background: #e8ecf1;
+            border-left-color: #537bd3;
+        }
+        
+        .vk-chat-item-top {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        
+        .vk-chat-item-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: #537bd3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+        
+        .vk-chat-item-info {
+            flex: 1;
+            overflow: hidden;
+        }
+        
+        .vk-chat-item-name {
+            font-size: 13px;
+            font-weight: 500;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .vk-chat-item-preview {
+            font-size: 12px;
+            color: #777;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-top: 2px;
+        }
+        
+        .new-chat-btn {
+            margin: 10px 12px;
+            padding: 10px;
+            background: #537bd3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            width: calc(100% - 24px);
+        }
+        
+        .new-chat-btn:hover {
+            background: #2d5aa0;
+        }
+        
+        /* ===== ОСНОВНОЙ ЧАТ ===== */
+        .vk-main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: white;
+            overflow: hidden;
+        }
+        
+        .vk-header {
+            padding: 12px 20px;
+            border-bottom: 1px solid #e5e5e5;
+            background: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .vk-header-left {
+            flex: 1;
+        }
+        
+        .vk-header-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .vk-header-subtitle {
+            font-size: 12px;
+            color: #777;
+            margin-top: 2px;
+        }
+        
+        .vk-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px 20px;
+            background: white;
+        }
+        
+        .vk-message-group {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 8px;
+        }
+        
+        .vk-message-group.own {
+            justify-content: flex-end;
+        }
+        
+        .vk-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #537bd3;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            flex-shrink: 0;
+        }
+        
+        .vk-message-content {
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+            max-width: 65%;
+        }
+        
+        .vk-message-group.own .vk-message-content {
+            align-items: flex-end;
+        }
+        
+        .vk-message-bubble {
+            background: #f0f2f5;
+            padding: 8px 12px;
+            border-radius: 18px;
+            font-size: 13px;
+            word-wrap: break-word;
+            line-height: 1.4;
+        }
+        
+        .vk-message-group.own .vk-message-bubble {
+            background: #d0e8ff;
+            color: #333;
+        }
+        
+        .vk-message-image {
+            max-width: 300px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .vk-message-time {
+            font-size: 11px;
+            color: #777;
+            padding: 0 12px;
+        }
+        
+        .vk-message-group.own .vk-message-time {
+            text-align: right;
+        }
+        
+        .vk-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: #999;
+            font-size: 14px;
+            text-align: center;
+        }
+        
+        /* ===== INPUT ===== */
+        .vk-input-area {
+            padding: 12px 20px;
+            border-top: 1px solid #e5e5e5;
+            background: white;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        
+        .vk-input-wrapper {
+            flex: 1;
+            display: flex;
+            gap: 8px;
+            align-items: flex-end;
+        }
+        
+        .vk-input-area textarea {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 3px;
+            font-family: Helvetica, Arial, sans-serif;
+            font-size: 13px;
+            resize: none;
+            max-height: 80px;
+        }
+        
+        .vk-input-area textarea:focus {
+            outline: none;
+            border-color: #537bd3;
+        }
+        
+        .vk-emoji-btn {
+            width: 32px;
+            height: 32px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .vk-send-btn {
+            width: 32px;
+            height: 32px;
+            background: #537bd3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+        }
+        
+        .vk-send-btn:hover {
+            background: #2d5aa0;
+        }
+        
+        .vk-send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        /* ===== ЭМОДЗИ ПИКЕР ===== */
+        .vk-emoji-picker {
+            position: absolute;
+            bottom: 60px;
+            right: 30px;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            padding: 10px;
+            display: none;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 8px;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .vk-emoji-picker.active {
+            display: grid;
+        }
+        
+        .vk-emoji-item {
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 3px;
+            transition: background 0.2s;
+        }
+        
+        .vk-emoji-item:hover {
+            background: #f0f2f5;
+        }
+        
+        /* ===== МОДАЛЫ ===== */
+        .vk-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .vk-modal.active {
+            display: flex;
+        }
+        
+        .vk-modal-content {
+            background: white;
+            border-radius: 6px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+        }
+        
+        .vk-modal-content h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #333;
+            font-weight: 600;
+        }
+        
+        .vk-modal-content input {
+            width: 100%;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+            border: 1px solid #e5e5e5;
+            border-radius: 3px;
+            font-size: 13px;
+            font-family: Helvetica, Arial, sans-serif;
+        }
+        
+        .vk-modal-content input:focus {
+            outline: none;
+            border-color: #537bd3;
+        }
+        
+        .vk-modal-button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 3px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-bottom: 8px;
+        }
+        
+        .vk-modal-button-primary {
+            background: #537bd3;
+            color: white;
+        }
+        
+        .vk-modal-button-primary:hover {
+            background: #2d5aa0;
+        }
+        
+        .vk-modal-button-secondary {
+            background: #f0f2f5;
+            color: #333;
+        }
+        
+        .vk-modal-button-secondary:hover {
+            background: #e5e5e5;
+        }
+        
+        /* ===== RESPONSIVE ===== */
+        @media (max-width: 768px) {
+            #chatScreen {
+                flex-direction: column;
+            }
+            
+            .vk-sidebar {
+                width: 100%;
+                max-height: 45vh;
+                border-right: none;
+                border-bottom: 1px solid #e5e5e5;
+            }
+            
+            .vk-main {
+                flex: 1;
+            }
+            
+            .vk-message-content {
+                max-width: 85%;
+            }
+            
+            .vk-message-image {
+                max-width: 200px;
+            }
+            
+            .vk-login {
+                padding: 30px 20px;
+            }
+        }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 4px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: #999;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ЛОГИН ЭКРАН -->
+<div id="loginScreen" class="screen active">
+    <div class="vk-login">
+        <div class="vk-logo">
+            <h1>VK Messenger</h1>
+            <p style="font-size: 12px; color: #777; margin-top: 5px;">Приватный чат</p>
+        </div>
+        <input type="text" id="nicknameInput" placeholder="Введи никнейм..." autofocus>
+        <button onclick="goToChat()">Войти</button>
+        <div style="margin-top: 15px; font-size: 12px; color: #777; text-align: center;">
+            <p>Это локальный мессенджер VK стиля 2017</p>
+        </div>
+    </div>
+</div>
+
+<!-- ЧАТ ЭКРАН -->
+<div id="chatScreen" class="screen">
+    <!-- ЛЕВАЯ ПАНЕЛЬ -->
+    <div class="vk-sidebar">
+        <div class="vk-sidebar-header">
+            <h2>Сообщения</h2>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">У</div>
+                <div class="user-name" id="userNameDisplay">Загрузка...</div>
+                <button class="logout-btn" onclick="goToLogin()" title="Выход">⊗</button>
+            </div>
+        </div>
+        
+        <input type="text" class="search-input" id="searchInput" placeholder="Поиск сообщений...">
+        
+        <div class="vk-chats" id="chatsList"></div>
+        
+        <button class="new-chat-btn" onclick="openNewChatModal()">Написать</button>
+    </div>
+    
+    <!-- ОСНОВНАЯ ЧАСТЬ -->
+    <div class="vk-main">
+        <div class="vk-header">
+            <div class="vk-header-left">
+                <div class="vk-header-title" id="chatTitle">Выбери чат</div>
+                <div class="vk-header-subtitle" id="chatSubtitle"></div>
+            </div>
+        </div>
+        
+        <div class="vk-messages" id="messagesArea">
+            <div class="vk-empty">Выбери чат чтобы начать</div>
+        </div>
+        
+        <div class="vk-input-area">
+            <div class="vk-input-wrapper">
+                <button class="vk-emoji-btn" onclick="toggleEmojiPicker()">😊</button>
+                <textarea id="messageInput" placeholder="Сообщение..." disabled></textarea>
+                <button class="vk-send-btn" onclick="sendMessage()" disabled id="sendBtn">➤</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- ЭМОДЗИ ПИКЕР -->
+    <div class="vk-emoji-picker" id="emojiPicker"></div>
+</div>
+
+<!-- МОДАЛ НОВОГО ЧАТА -->
+<div class="vk-modal" id="newChatModal">
+    <div class="vk-modal-content">
+        <h3>Новый чат</h3>
+        <input type="text" id="chatNameInput" placeholder="Название (напр. Друзья)..." autofocus>
+        <button class="vk-modal-button vk-modal-button-primary" onclick="createNewChat()">Создать</button>
+        <button class="vk-modal-button vk-modal-button-secondary" onclick="closeNewChatModal()">Отмена</button>
+    </div>
+</div>
+
+<script>
+    // Firebase Config - ВАЖНО: Создай свой Firebase проект и замени эти данные!
+    const firebaseConfig = {
+        apiKey: "AIzaSyDmK8xN5pQ2jL9vH6mK0rX3sT8uV2wY5zA",
+        authDomain: "messenger-vk.firebaseapp.com",
+        databaseURL: "https://messenger-vk-default-rtdb.firebaseio.com",
+        projectId: "messenger-vk",
+        storageBucket: "messenger-vk.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abc123def456"
+    };
+    
+    // Инициализируем Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    
+    let currentUser = '';
+    let currentChatId = null;
+    let chats = {};
+    
+    // Эмодзи список
+    const emojis = ['😀', '😂', '😍', '🔥', '👍', '😎', '🤔', '😱', '🎉', '💯', '😘', '🙏', '❤️', '👌', '🚀', '💪', '🤷', '😎'];
+    
+    // Инициализация эмодзи пикера
+    function initEmojiPicker() {
+        const picker = document.getElementById('emojiPicker');
+        picker.innerHTML = emojis.map(e => `<div class="vk-emoji-item" onclick="addEmoji('${e}')">${e}</div>`).join('');
+    }
+    
+    function toggleEmojiPicker() {
+        document.getElementById('emojiPicker').classList.toggle('active');
+    }
+    
+    function addEmoji(emoji) {
+        const input = document.getElementById('messageInput');
+        input.value += emoji;
+        input.focus();
+        toggleEmojiPicker();
+    }
+    
+    // ВХОД
+    function goToChat() {
+        const nick = document.getElementById('nicknameInput').value.trim();
+        if (!nick || nick.length < 2) {
+            alert('Введи никнейм (мин. 2 символа)');
+            return;
+        }
+        
+        currentUser = nick;
+        document.getElementById('userAvatar').textContent = nick.charAt(0).toUpperCase();
+        document.getElementById('userNameDisplay').textContent = nick;
+        document.getElementById('loginScreen').classList.remove('active');
+        document.getElementById('chatScreen').classList.add('active');
+        
+        initEmojiPicker();
+        loadChatsFromFirebase();
+    }
+    
+    // ВЫХОД
+    function goToLogin() {
+        currentUser = '';
+        currentChatId = null;
+        document.getElementById('nicknameInput').value = '';
+        document.getElementById('chatScreen').classList.remove('active');
+        document.getElementById('loginScreen').classList.add('active');
+        document.getElementById('nicknameInput').focus();
+    }
+    
+    // ЗАГРУЗКА ЧАТОВ ИЗ FIREBASE
+    function loadChatsFromFirebase() {
+        db.ref('chats').on('value', (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                chats = data;
+            } else {
+                // Создаем дефолтные чаты если их нет
+                chats = {
+                    'general': { name: '📢 Общий', messages: {} },
+                    'random': { name: '🎲 Random', messages: {} }
+                };
+                db.ref('chats').set(chats);
+            }
+            renderChats();
+            if (currentChatId && chats[currentChatId]) {
+                displayMessages();
+            }
+        });
+    }
+    
+    // ОТРИСОВКА ЧАТОВ
+    function renderChats() {
+        const list = document.getElementById('chatsList');
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        list.innerHTML = '';
+        
+        for (let key in chats) {
+            const chat = chats[key];
+            if (!chat.name.toLowerCase().includes(search)) continue;
+            
+            const messages = chat.messages || {};
+            const msgArray = Object.values(messages);
+            const lastMsg = msgArray.length > 0 ? msgArray[msgArray.length - 1] : null;
+            const preview = lastMsg ? (lastMsg.user + ': ' + (lastMsg.text ? lastMsg.text.substring(0, 30) : 'Фото')).substring(0, 40) : 'Нет сообщений';
+            
+            const el = document.createElement('div');
+            el.className = 'vk-chat-item' + (currentChatId === key ? ' active' : '');
+            
+            el.innerHTML = `
+                <div class="vk-chat-item-top">
+                    <div class="vk-chat-item-avatar">${chat.name.charAt(0)}</div>
+                    <div class="vk-chat-item-info">
+                        <div class="vk-chat-item-name">${chat.name}</div>
+                        <div class="vk-chat-item-preview">${preview}</div>
+                    </div>
+                </div>
+            `;
+            el.onclick = () => selectChat(key);
+            list.appendChild(el);
+        }
+    }
+    
+    // ВЫБОР ЧАТА
+    function selectChat(chatId) {
+        currentChatId = chatId;
+        const chat = chats[chatId];
+        
+        document.getElementById('chatTitle').textContent = chat.name;
+        document.getElementById('chatSubtitle').textContent = 'Открыт чат';
+        document.getElementById('messageInput').disabled = false;
+        document.getElementById('sendBtn').disabled = false;
+        document.getElementById('messageInput').focus();
+        
+        renderChats();
+        displayMessages();
+    }
+    
+    // ПОКАЗ СООБЩЕНИЙ
+    function displayMessages() {
+        if (!currentChatId) return;
+        
+        const area = document.getElementById('messagesArea');
+        const chat = chats[currentChatId];
+        const messages = chat.messages || {};
+        
+        const msgArray = Object.entries(messages)
+            .sort((a, b) => (a[1].timestamp || 0) - (b[1].timestamp || 0))
+            .map(([id, msg]) => ({...msg, id}));
+        
+        if (msgArray.length === 0) {
+            area.innerHTML = '<div class="vk-empty">Нет сообщений</div>';
+            return;
+        }
+        
+        area.innerHTML = msgArray.map((msg, idx) => {
+            const isOwn = msg.user === currentUser;
+            const prevMsg = idx > 0 ? msgArray[idx - 1] : null;
+            const showAvatar = !prevMsg || prevMsg.user !== msg.user;
+            
+            const time = new Date(msg.timestamp).toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+            
+            return `
+                <div class="vk-message-group ${isOwn ? 'own' : ''}">
+                    ${!isOwn ? `<div class="vk-avatar">${msg.user.charAt(0).toUpperCase()}</div>` : ''}
+                    <div class="vk-message-content">
+                        <div class="vk-message-bubble">
+                            ${escapeHtml(msg.text || '')}
+                        </div>
+                        <div class="vk-message-time">${time}</div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+        
+        area.scrollTop = area.scrollHeight;
+    }
+    
+    // ОТПРАВКА СООБЩЕНИЯ
+    function sendMessage() {
+        if (!currentChatId) return;
+        
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        
+        if (!text) return;
+        
+        const chat = chats[currentChatId];
+        if (!chat.messages) chat.messages = {};
+        
+        const msgId = db.ref('chats/' + currentChatId + '/messages').push().key;
+        
+        const message = {
+            user: currentUser,
+            text: text,
+            timestamp: firebase.database.ServerValue.TIMESTAMP
+        };
+        
+        db.ref('chats/' + currentChatId + '/messages/' + msgId).set(message);
+        
+        input.value = '';
+        input.focus();
+    }
+    
+    // СОЗДАНИЕ ЧАТА
+    function openNewChatModal() {
+        document.getElementById('newChatModal').classList.add('active');
+        document.getElementById('chatNameInput').focus();
+    }
+    
+    function closeNewChatModal() {
+        document.getElementById('newChatModal').classList.remove('active');
+    }
+    
+    function createNewChat() {
+        const name = document.getElementById('chatNameInput').value.trim();
+        if (!name) {
+            alert('Введи название!');
+            return;
+        }
+        
+        const chatId = 'chat_' + Date.now();
+        db.ref('chats/' + chatId).set({
+            name: name,
+            messages: {}
+        });
+        
+        document.getElementById('chatNameInput').value = '';
+        closeNewChatModal();
+    }
+    
+    // ПОИСК
+    document.getElementById('searchInput').addEventListener('input', renderChats);
+    
+    // КЛАВИША ENTER
+    document.getElementById('messageInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (currentChatId) sendMessage();
+        }
+    });
+    
+    // ESCAPE
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            document.getElementById('newChatModal').classList.remove('active');
+            document.getElementById('emojiPicker').classList.remove('active');
+        }
+    });
+    
+    // Защита от XSS
+    function escapeHtml(text) {
+        const map = {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'};
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+</script>
+
+</body>
+</html>
